@@ -69,11 +69,16 @@ class App {
   #workouts = [];
 
   constructor() {
+    // Отримання місцезнаходження користувача
     this._getPosition();
 
-    form.addEventListener("submit", this._newWorkout.bind(this));
+    // Отримання даних із local storage
+    this._getLocalStorageData();
 
+    // Додавання обробника подій
+    form.addEventListener("submit", this._newWorkout.bind(this));
     inputType.addEventListener("change", this._togglgeClimbField);
+    containerWorkouts.addEventListener("click", this._moveToWorkout.bind(this));
   }
 
   _getPosition() {
@@ -103,6 +108,11 @@ class App {
 
     // Опрацювання кліків на карті
     this.#map.on("click", this._showForm.bind(this));
+
+    // Відображення тренувань із local storage
+    this.#workouts.forEach((workout) => {
+      this._displayWorkout(workout);
+    });
   }
 
   _showForm(e) {
@@ -184,6 +194,9 @@ class App {
     this._displayWorkoutOnSidebar(workout);
     // Сховати форму і очистити поля вводу даних
     this._hideForm();
+
+    // Добавити всі тренування в локальне сховище
+    this._addWorkoutsToLocalStorage();
   }
 
   _displayWorkout(workout) {
@@ -198,7 +211,9 @@ class App {
           className: `${workout.type}-popup`,
         })
       )
-      .setPopupContent(`${ workout.type === "running" ? "🏃" : "🚵‍♂️"} ${workout.description}`)
+      .setPopupContent(
+        `${workout.type === "running" ? "🏃" : "🚵‍♂️"} ${workout.description}`
+      )
       .openPopup();
   }
 
@@ -254,7 +269,43 @@ class App {
 
     form.insertAdjacentHTML("afterend", html);
   }
+
+  _moveToWorkout(e) {
+    const workoutElement = e.target.closest(".workout");
+
+    if (!workoutElement) return;
+
+    const workout = this.#workouts.find(
+      (item) => item.id === workoutElement.dataset.id
+    );
+
+    this.#map.setView(workout.coords, 13, {
+      animate: true,
+      pan: {
+        duration: 1,
+      },
+    });
+  }
+
+  _addWorkoutsToLocalStorage() {
+    localStorage.setItem("workouts", JSON.stringify(this.#workouts));
+  }
+  _getLocalStorageData() {
+    const data = JSON.parse(localStorage.getItem("workouts"));
+
+    if (!data) return;
+
+    this.#workouts = data;
+
+    this.#workouts.forEach((workout) => {
+      this._displayWorkoutOnSidebar(workout);
+    });
+  }
+
+  reset() {
+    localStorage.removeItem("workouts");
+    location.reload();
+  }
 }
 
 const app = new App();
-app._getPosition();
